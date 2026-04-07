@@ -2,6 +2,7 @@
 
 namespace App\Commands;
 
+use App\Handlers\AgentQuery;
 use App\Handlers\AnalyzeFailure;
 use App\Handlers\SlackMessage;
 use Illuminate\Support\Facades\Log;
@@ -16,7 +17,7 @@ class Listen extends Command
 
     public function handle(): void
     {
-        $channels = ['bifrost.slack', 'bifrost.agent'];
+        $channels = ['bifrost.slack', 'bifrost.agent', 'bifrost.query'];
 
         $this->info('bifrost-agent listening on: '.implode(', ', $channels));
         Log::info('bifrost-agent started', ['channels' => $channels]);
@@ -42,12 +43,13 @@ class Listen extends Command
             match ($channel) {
                 'bifrost.slack' => (new SlackMessage)->handle($event),
                 'bifrost.agent' => $this->handleAgentEvent($event),
-                default         => null,
+                'bifrost.query' => (new AgentQuery)->handle($event),
+                default => null,
             };
         } catch (\Throwable $e) {
             Log::error('Listen: handler threw', [
                 'channel' => $channel,
-                'error'   => $e->getMessage(),
+                'error' => $e->getMessage(),
             ]);
         }
     }
@@ -58,7 +60,7 @@ class Listen extends Command
 
         match ($eventType) {
             'analyze_failure' => (new AnalyzeFailure)->handle($event),
-            default           => Log::debug('Listen: unhandled agent event', ['type' => $eventType]),
+            default => Log::debug('Listen: unhandled agent event', ['type' => $eventType]),
         };
     }
 }

@@ -4,7 +4,6 @@ namespace App\Tools;
 
 use Illuminate\Contracts\JsonSchema\JsonSchema;
 use Illuminate\Support\Facades\Http;
-use Illuminate\Support\Facades\Redis;
 use Laravel\Ai\Contracts\Tool;
 use Laravel\Ai\Tools\Request;
 use Stringable;
@@ -18,31 +17,36 @@ class BifrostStats implements Tool
 
     public function handle(Request $request): Stringable|string
     {
-        $lines = [];
+        $url = config('services.bifrost.api_url');
 
-        // Redis
         try {
-            Redis::ping();
-            $queueDepth = Redis::llen('queues:bifrost') ?: 0;
-            $lines[] = "Redis: OK | Queue depth: {$queueDepth}";
+            $response = Http::timeout(5)->get("{$url}/api/stats");
+
+            if (! $response->successful()) {
+                return 'Bifrost API: '.$response->status();
+            }
+
+            $data = $response->json();
         } catch (\Throwable $e) {
-            $lines[] = 'Redis: DOWN — '.$e->getMessage();
+            return 'Bifrost API: unreachable — '.$e->getMessage();
         }
 
-        // Bifrost API health
-        try {
-            $url = config('services.bifrost.api_url');
-            $response = Http::timeout(5)->get("{$url}/api/health");
+        $redis = $data['redis'] ?? 'unknown';
+        $queueDepth = $data['queue_depth'] ?? 0;
+        $webhooks24h = $data['webhooks_24h'] ?? 0;
+        $sources = $data['sources'] ?? [];
 
-            if ($response->successful()) {
-                $data = $response->json();
-                $db = $data['database'] ?? 'unknown';
-                $lines[] = "Bifrost API: OK | DB: {$db}";
-            } else {
-                $lines[] = 'Bifrost API: '.$response->status();
+        $lines = [];
+        $lines[] = "Redis: {$redis} | Queue depth: {$queueDepth} | Webhooks (24h): {$webhooks24h}";
+
+        if (! empty($sources)) {
+            $lines[] = '';
+            $lines[] = 'Per-source (24h):';
+            foreach ($sources as $name => $info) {
+                $count = $info['count_24h'] ?? 0;
+                $last = $info['last_received'] ?? 'never';
+                $lines[] = "  {$name}: {$count} webhooks | last: {$last}";
             }
-        } catch (\Throwable $e) {
-            $lines[] = 'Bifrost API: unreachable — '.$e->getMessage();
         }
 
         return implode("\n", $lines);
