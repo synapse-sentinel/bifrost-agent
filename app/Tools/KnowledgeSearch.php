@@ -3,10 +3,11 @@
 namespace App\Tools;
 
 use Illuminate\Contracts\JsonSchema\JsonSchema;
-use Illuminate\Support\Facades\Http;
 use Laravel\Ai\Contracts\Tool;
 use Laravel\Ai\Tools\Request;
 use Stringable;
+use TheShit\Vector\Contracts\EmbeddingClient;
+use TheShit\Vector\Qdrant;
 
 class KnowledgeSearch implements Tool
 {
@@ -25,10 +26,16 @@ class KnowledgeSearch implements Tool
         $project = $request['project'] ?? null;
         $limit = min((int) ($request['limit'] ?? 5), 10);
 
-        $embedding = $this->embed($query);
-        if ($embedding === null) {
+        /** @var EmbeddingClient $embeddings */
+        $embeddings = app(EmbeddingClient::class);
+        $vector = $embeddings->embed($query);
+
+        if ($vector === []) {
             return 'Knowledge search unavailable: embeddings service unreachable.';
         }
+
+        /** @var Qdrant $qdrant */
+        $qdrant = app(Qdrant::class);
 
         $collections = $project
             ? ["knowledge_{$project}"]
@@ -36,7 +43,20 @@ class KnowledgeSearch implements Tool
 
         $results = [];
         foreach ($collections as $collection) {
-            $results = array_merge($results, $this->searchCollection($collection, $embedding, $limit));
+            try {
+                $points = $qdrant->search($collection, $vector, $limit, null, 0.3);
+                foreach ($points as $point) {
+                    $results[] = [
+                        'score' => $point->score,
+                        'title' => $point->payload['title'] ?? '',
+                        'content' => $point->payload['content'] ?? '',
+                        'category' => $point->payload['category'] ?? '',
+                        'tags' => $point->payload['tags'] ?? [],
+                    ];
+                }
+            } catch (\Throwable) {
+                continue;
+            }
         }
 
         usort($results, fn ($a, $b) => $b['score'] <=> $a['score']);
@@ -73,53 +93,5 @@ class KnowledgeSearch implements Tool
             'project' => $schema->string()->description('Filter to a specific project namespace (e.g., "bifrost", "jordan", "odin"). Omit to search bifrost + default + jordan.'),
             'limit' => $schema->integer()->description('Max results to return (default 5, max 10)'),
         ];
-    }
-
-    private function embed(string $text): ?array
-    {
-        $host = config('services.knowledge.embeddings_host', 'host.containers.internal:8001');
-
-        try {
-            $response = Http::timeout(5)
-                ->post("http://{$host}/embed", ['text' => $text]);
-
-            if ($response->successful()) {
-                $data = $response->json();
-
-                return $data['embeddings'][0] ?? null;
-            }
-        } catch (\Throwable) {
-            // Fall through
-        }
-
-        return null;
-    }
-
-    private function searchCollection(string $collection, array $embedding, int $limit): array
-    {
-        $host = config('services.knowledge.qdrant_host', 'host.containers.internal:6333');
-
-        try {
-            $response = Http::timeout(5)->post("http://{$host}/collections/{$collection}/points/search", [
-                'vector' => $embedding,
-                'limit' => $limit,
-                'with_payload' => true,
-                'score_threshold' => 0.3,
-            ]);
-
-            if (! $response->successful()) {
-                return [];
-            }
-
-            return array_map(fn ($point) => [
-                'score' => $point['score'] ?? 0,
-                'title' => $point['payload']['title'] ?? '',
-                'content' => $point['payload']['content'] ?? '',
-                'category' => $point['payload']['category'] ?? '',
-                'tags' => $point['payload']['tags'] ?? [],
-            ], $response->json('result', []));
-        } catch (\Throwable) {
-            return [];
-        }
     }
 }

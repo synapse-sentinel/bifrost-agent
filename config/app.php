@@ -1,5 +1,8 @@
 <?php
 
+use App\Providers\AppServiceProvider;
+use TheShit\Vector\VectorServiceProvider;
+
 return [
 
     /*
@@ -54,7 +57,8 @@ return [
     */
 
     'providers' => [
-        App\Providers\AppServiceProvider::class,
+        AppServiceProvider::class,
+        VectorServiceProvider::class,
     ],
 
 ];

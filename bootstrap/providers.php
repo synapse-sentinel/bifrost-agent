@@ -1,5 +1,13 @@
 <?php
 
+use App\Providers\AppServiceProvider;
+use Illuminate\Redis\RedisServiceProvider;
+use Laravel\Ai\AiServiceProvider;
+use Prism\Prism\PrismServiceProvider;
+
 return [
-    App\Providers\AppServiceProvider::class,
+    AppServiceProvider::class,
+    RedisServiceProvider::class,
+    PrismServiceProvider::class,
+    AiServiceProvider::class,
 ];

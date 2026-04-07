@@ -20,7 +20,8 @@
         "illuminate/redis": "^12.17",
         "laravel-zero/framework": "^12.0.2",
         "laravel/ai": "^0.3.0",
-        "predis/predis": "^3.4"
+        "predis/predis": "^3.4",
+        "the-shit/vector": "^0.2"
     },
     "require-dev": {
         "laravel/pint": "^1.25.1",
