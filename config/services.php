@@ -28,4 +28,12 @@ return [
     'bifrost_agent' => [
         'model' => env('BIFROST_AGENT_MODEL', 'x-ai/grok-4-fast'),
     ],
+
+    'mattermost' => [
+        'url' => env('MATTERMOST_URL', 'http://localhost:8065'),
+        'bot_token' => env('MATTERMOST_BOT_TOKEN'),
+        'team_id' => env('MATTERMOST_TEAM_ID'),
+        'channel_id' => env('MATTERMOST_CHANNEL_ID'),
+        'bot_user_id' => env('MATTERMOST_BOT_USER_ID'),
+    ],
 ];
