@@ -9,7 +9,6 @@ use App\Tools\KnowledgeSearch;
 use App\Tools\KnowledgeStore;
 use App\Tools\ReadSourceFile;
 use App\Tools\SlackReply;
-use Illuminate\Support\Collection;
 use Laravel\Ai\Attributes\Provider;
 use Laravel\Ai\Contracts\Agent;
 use Laravel\Ai\Contracts\Conversational;
