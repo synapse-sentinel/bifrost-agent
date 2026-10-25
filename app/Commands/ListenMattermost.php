@@ -4,7 +4,6 @@ namespace App\Commands;
 
 use App\Handlers\MattermostMessage;
 use App\Services\MattermostService;
-use App\Support\ConversationMemory;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;

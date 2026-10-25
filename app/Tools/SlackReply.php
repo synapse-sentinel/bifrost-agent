@@ -58,8 +58,8 @@ class SlackReply implements Tool
     public function schema(JsonSchema $schema): array
     {
         return [
-            'channel'   => $schema->string()->description('Slack channel ID or name')->required(),
-            'text'      => $schema->string()->description('Message text (supports mrkdwn)')->required(),
+            'channel' => $schema->string()->description('Slack channel ID or name')->required(),
+            'text' => $schema->string()->description('Message text (supports mrkdwn)')->required(),
             'thread_ts' => $schema->string()->description('Thread timestamp to reply in a thread'),
         ];
     }
